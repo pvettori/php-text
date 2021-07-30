@@ -1,7 +1,7 @@
 {
     "name": "pvettori/text",
     "version": "0.0.1",
-    "description": "String manipulation for humans.",
+    "description": "PHP Text: string manipulation for humans.",
     "authors": [
         {
             "name": "Piero Vettori",

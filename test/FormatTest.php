@@ -8,6 +8,11 @@ class FormatTest extends TestCase
     {
         return [
             [
+                '$format' => 'test %s',
+                '$values' => ['x'],
+                '$expect' => 'test x',
+            ],
+            [
                 '$format' => 'test %{a} %{0} %{[1].b}',
                 '$values' => ['x', ['b' => 'y'], 'a' => 1],
                 '$expect' => 'test 1 x y',
@@ -18,8 +23,23 @@ class FormatTest extends TestCase
                 '$expect' => '1.234',
             ],
             [
+                '$format' => '${0:d}',
+                '$values' => [-1234.567],
+                '$expect' => '-1234.567',
+            ],
+            [
                 '$format' => '${0:c}',
                 '$values' => [-1234.567],
+                '$expect' => '€ -1.234,56',
+            ],
+            [
+                '$format' => '${0:c}',
+                '$values' => [-1234.567],
+                '$expect' => '€ -1.234,56',
+            ],
+            [
+                '$format' => '${0:c}',
+                '$values' => ['-1234.567'],
                 '$expect' => '€ -1.234,56',
             ],
             [
@@ -33,6 +53,16 @@ class FormatTest extends TestCase
                 '$expect' => '$ -1.234,56',
             ],
             [
+                '$format' => '${0:t}',
+                '$values' => [1234.567],
+                '$expected' => '1970-01-01 00:20:34 567000',
+            ],
+            [
+                '$format' => '${0:t}',
+                '$values' => ['1234.567'],
+                '$expected' => '1970-01-01 00:20:34 567000',
+            ],
+            [
                 '$format' => '${0:Y-m-d H:i:s}',
                 '$values' => [1234.567],
                 '$expected' => '1970-01-01 00:20:34',
@@ -43,9 +73,9 @@ class FormatTest extends TestCase
                 '$expected' => '2021-01-01',
             ],
             [
-                '$format' => '${0:Y-m-d H:i:s}',
+                '$format' => '${0:Y-m-d H:i:00}',
                 '$values' => ['now'],
-                '$expected' => date_format(date_create('now', timezone_open('UTC')), 'Y-m-d H:i:s'),
+                '$expected' => date_format(date_create('now', timezone_open('UTC')), 'Y-m-d H:i:00'),
             ],
         ];
     }

@@ -35,11 +35,13 @@ final class Text
     /**
      * Convert a string's character encoding.
      *
-     * @see [Supported Encodings](https://www.php.net/manual/en/mbstring.supported-encodings.php)
+     * @see https://www.php.net/manual/en/mbstring.supported-encodings.php
      *
      * @param string          $string   The original string.
      * @param string          $encoding The target encoding.
-     * @param string|string[] $from     [optional] The original encoding.
+     * @param string|string[] $from     [optional] The original encoding. \
+     *                                  It is either an array, or a comma separated enumerated list. \
+     *                                  If `$from` is not specified, then the internal encoding will be used.
      *
      * @return string
      */
@@ -55,20 +57,20 @@ final class Text
     /**
      * Format a string.
      *
-     * @param string $format The output format string.
+     * @param string $format The output format string. \
      *                       A conversion specification follows the following prototypes:
      *                       - `%{key}` | `${key}`
      *                       - `%{key:modifier}` | `${key:modifier}`
-     *                       Keys in the format string must match the appropriate value key.
+     *                       Keys in the format string must match the appropriate value key. \
      *                       Nested values can be referenced via dot notation.
-     * @param array  $values The replacemente values.
+     * @param array  $values The replacemente values. \
      *                       The array can be either indexed or associative.
      *
      * @return string
      */
     public static function format(string $format, array $values)
     {
-        static $regex = '/(?:[\%\$])\{(?<key>\d+|((\[\d+\]|[a-zA-Z_]\w*)(\.(\[\d+\]|[a-zA-Z_]\w*))*))(:(?<mod>[bcdfhilu]|.*))?\}/';
+        static $regex = '/(?:[\%\$])\{(?<key>\d+|((\[\d+\]|[a-zA-Z_]\w*)(\.(\[\d+\]|[a-zA-Z_]\w*))*))(:(?<mod>[bcdfhiltu]|.*))?\}/';
 
         if (preg_match_all($regex, $format, $matches, PREG_PATTERN_ORDER)) {
             $values = static::arrayValues($values);
@@ -77,18 +79,21 @@ final class Text
                 if ($mod = $matches['mod'][$index] ?? null) {
                     switch ($mod) {
                         case 'b': $val = $val ? 'true' : 'false'; break;
-                        case 'c': $val = static::numberFormat(floatval($val), '$ 0,000.'.str_repeat('0', static::getLocale('currency_digits'))); break;
+                        case 'c': $val = static::formatNumber(floatval($val), '$ 0,000.'.str_repeat('0', static::getLocale('currency_digits'))); break;
                         case 'd':
                         case 'f': $val = floatval($val); break;
                         case 'h': $val = dechex(intval($val)); break;
                         case 'i': $val = intval($val); break;
                         case 'l': $val = strtolower($val); break;
+                        case 't': $val = static::formatDatetime($val, 'Y-m-d H:i:s u'); break;
                         case 'u': $val = strtoupper($val); break;
-                        default: $val = static::numberFormat($val, $mod);
+                        default: $val = static::formatValue($val, $mod);
                     }
                 }
                 $format = str_replace($pattern, $val, $format);
             }
+        } else {
+            $format = vsprintf($format, $values);
         }
 
         return $format;
@@ -97,17 +102,15 @@ final class Text
     /**
      * Find the position of a substring in a string.
      *
-     * A return value of `-1` means that the substing was not found.
-     *
      * @param string $substring      The substring to search for.
      * @param string $string         The string to search in.
-     * @param int    $offset         [optional]
+     * @param int    $offset         [optional] \
      *                               If positive, the search is performed left to right skipping the first **offset** bytes.
      *                               If negative, the search is performed right to left skipping the last **offset** bytes.
-     * @param bool   $case_sensitive [optional]
+     * @param bool   $case_sensitive [optional] \
      *                               If `false`, serarch will be case-insensitive. Default: `true`.
      *
-     * @return int
+     * @return int A return value of `-1` means that the substing was not found.
      */
     public static function indexOf(string $substring, string $string, int $offset = 0, bool $case_sensitive = true)
     {
@@ -131,8 +134,8 @@ final class Text
     /**
      * Join array elements with a string.
      *
-     * @param string|string[] $array  The array of strings to join.
-     * @param string          $string [optional]
+     * @param array  $array  The array of strings to join.
+     * @param string $string [optional] The string used to join the array items together.
      *
      * @return string
      */
@@ -161,52 +164,73 @@ final class Text
     /**
      * Convert a string to lowercase.
      *
-     * @param string $string
+     * @param string $string The string to be converted to lowercase.
      *
      * @return string
      */
     public static function lowercase(string $string)
     {
-        return @mb_convert_case($string, MB_CASE_LOWER) ?: strtolower($string);
+        $result = function_exists('mb_convert_case') ? mb_convert_case($string, MB_CASE_LOWER) : strtolower($string);
+
+        return is_string($result) ? $result : $string;
     }
 
     /**
-     * Perform a regular expression match.
+     * Perform a string match. \
+     * Returns the first full match.
      *
      * @param string $string  The input string.
-     * @param string $pattern The pattern to search for, as a string.
+     * @param string $pattern The characters or regex to search for.
+     * @param array  $groups  [optional] Array of all captured groups.
      *
-     * @return array
+     * @return string|null The first full match.
      */
-    public static function match(string $string, string $pattern)
+    public static function match(string $string, string $pattern, array &$groups = null)
     {
-        preg_match($pattern, $string, $matches);
+        if (in_array(@preg_match($pattern, ''), [false, null], true)) {
+            $pattern = sprintf('/%s/', preg_quote($pattern, '/'));
+        }
 
-        return $matches;
+        preg_match($pattern, $string, $groups);
+
+        return array_shift($groups);
     }
 
     /**
-     * Perform a global regular expression match.
+     * Perform a global string match. \
+     * Returns an array of all the full matches indexed by offset.
      *
      * @param string $string  The input string.
-     * @param string $pattern The pattern to search for, as a string.
+     * @param string $pattern The characters or regex to search for.
+     * @param array  $groups  [optional] Array of all captured groups indexed by global match offset.
      *
-     * @return array
+     * @return array Array of all the full matches indexed by offset.
      */
-    public static function matchAll(string $string, string $pattern)
+    public static function matchAll(string $string, string $pattern, array &$groups = null)
     {
-        preg_match_all($pattern, $string, $matches, PREG_SET_ORDER);
+        if (in_array(@preg_match($pattern, ''), [false, null], true)) {
+            $pattern = sprintf('/%s/', preg_quote($pattern, '/'));
+        }
 
-        return $matches;
+        preg_match_all($pattern, $string, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+
+        $fullMatches = $groups = [];
+        foreach ($matches as $match) {
+            list($fullMatch, $index) = array_shift($match);
+            $fullMatches[$index] = $fullMatch;
+            $groups[$index] = array_map(function ($result) { return $result[0]; }, $match);
+        }
+
+        return $fullMatches;
     }
 
     /**
      * Pad a string to a certain length with another string.
      *
      * @param string $string The original string.
-     * @param int    $length The string target length;
+     * @param int    $length The string target length.
      * @param string $chars  [optional] The padding characters. Default: `' '`.
-     * @param int    $side   [optional] The padding side (`Text::PAD_BOTH|Text::PAD_LEFT|Text::PAD_RIGHT`).
+     * @param int    $side   [optional] The padding side (`Text::PAD_BOTH|Text::PAD_LEFT|Text::PAD_RIGHT`). \
      *                       Default: `Text::PAD_LEFT`.
      *
      * @return string
@@ -221,7 +245,7 @@ final class Text
      *
      * @param string $string  The original string.
      * @param string $pattern The characters or regex used as splitter.
-     * @param int    $limit   [optional] The maximum number of cuts (`0` - or negative numbers - means no limits).
+     * @param int    $limit   [optional] The maximum number of cuts (`0` - or negative numbers - means no limits). \
      *                        Default: `0`.
      *
      * @return array
@@ -238,10 +262,10 @@ final class Text
     }
 
     /**
-     * Apply a style to a given string.
+     * Apply a style to a string.
      *
      * @param string $string The original string.
-     * @param int    $style  [optional] The style to be applied. Default: `Text::STYLE_TEXT_PARAGRAPH`.
+     * @param int    $style  [optional] The style to be applied. Default: `Text::STYLE_TEXT_PARAGRAPH`. \
      *                       Accepted values:
      *                       - `Text::STYLE_TEXT_PARAGRAPH`
      *                       - `Text::STYLE_TEXT_TITLE`
@@ -287,9 +311,9 @@ final class Text
 
                 return implode('', $chunks);
             case static::STYLE_TEXT_LOWERCASE:
-                return @mb_convert_case($string, MB_CASE_LOWER) ?: strtolower($string);
+                return static::lowercase($string);
             case static::STYLE_TEXT_UPPERCASE:
-                return @mb_convert_case($string, MB_CASE_UPPER) ?: strtoupper($string);
+                return static::uppercase($string);
             case static::STYLE_VAR_CAMEL_CASE:
                 $words = $parseWords($string);
 
@@ -311,8 +335,8 @@ final class Text
      * Return part of a string.
      *
      * @param string $string The original string.
-     * @param int    $start  [optional]
-     * @param int    $length [optional]
+     * @param int    $start  [optional] Start position.
+     * @param int    $length [optional] Length of the extracted string.
      *
      * @return string
      */
@@ -347,13 +371,15 @@ final class Text
     /**
      * Convert a string to uppercase.
      *
-     * @param string $string
+     * @param string $string The string to be converted to uppercase.
      *
      * @return string
      */
     public static function uppercase(string $string)
     {
-        return @mb_convert_case($string, MB_CASE_UPPER) ?: strtoupper($string);
+        $result = function_exists('mb_convert_case') ? mb_convert_case($string, MB_CASE_UPPER) : strtoupper($string);
+
+        return is_string($result) ? $result : $string;
     }
 
     /**
@@ -362,7 +388,11 @@ final class Text
      * @param string $string The original string.
      * @param int    $length The maximum length of a line.
      * @param string $break  [optional] Line break character.
-     * @param bool   $cut    [optional] How to cut the line if a word exceeds maximum length.
+     * @param bool   $cut    [optional] How to cut the line if a word exceeds maximum length. \
+     *                       Accepted values:
+     *                       - `Text::WRAP_AFTER`
+     *                       - `Text::WRAP_BEFORE`
+     *                       - `Text::WRAP_BREAK`
      *
      * @return string
      */
@@ -386,6 +416,14 @@ final class Text
 
     /* LOCALE */
 
+    /**
+     * Get locale settings. \
+     * Initially equals to system locale settings.
+     *
+     * @param string $key [optional] If `$key` is provided then only the corresponding value is returned.
+     *
+     * @return mixed
+     */
     public static function getLocale(string $key = null)
     {
         if (!static::$locale) {
@@ -395,6 +433,11 @@ final class Text
         return $key ? (static::$locale[$key] ?? null) : static::$locale;
     }
 
+    /**
+     * Get settings as per system locale.
+     *
+     * @return array
+     */
     public static function getSystemLocale(): array
     {
         $locale = localeconv();
@@ -413,6 +456,21 @@ final class Text
         ];
     }
 
+    /**
+     * Set locale Settings.
+     *
+     * @param array $locale Array of locale settings.
+     *                      New settings are merged with current settings. \
+     *                      Available locale settings: \
+     *                      - `'currency_abbrev'`
+     *                      - `'currency_digits'`
+     *                      - `'currency_symbol'`
+     *                      - `'decimal_separator'`
+     *                      - `'thousand_separator'`
+     *                      - `'timezone'`
+     *
+     * @return void
+     */
     public static function setLocale(array $locale)
     {
         static::$locale = array_merge(static::getLocale(), $locale);
@@ -434,33 +492,56 @@ final class Text
         return $result;
     }
 
-    private static function numberFormat($value, string $format = null): string
+    private static function formatDatetime($value, string $format)
     {
-        $decimalSeparator = static::getLocale('decimal_separator');
-        $thousandSeparator = static::getLocale('thousand_separator');
-        $format = str_replace('\$', '$', preg_replace('/(?<!\\\\)\$/', static::getLocale('currency_symbol'), $format));
+        $timezone = timezone_open(static::getLocale('timezone'));
 
-        if (is_null($format)) {
-            /* SKIP */
-        } elseif (preg_match('/^(?<ini>.*?)(?<int>0,000|0)(\.(?<dec>0+))?(?<end>.*?)$/', $format, $matches)) {
-            $int = intval($value);
-            $dec = abs(fmod($value, 1));
-            if ('0,000' === $matches['int']) {
-                $value = strrev(implode($thousandSeparator, str_split(strrev($int), 3)));
-            }
-            if ($len = strlen($matches['dec'] ?? '')) {
-                $value .= $decimalSeparator.str_pad(substr((string) $dec, 2, $len), $len, '0');
-            }
-            $value = $matches['ini'].$value.$matches['end'];
-        } elseif (@date($format)) {
-            $timezone = timezone_open(static::getLocale('timezone'));
-            if (is_string($value) && ($datetime = @date_create($value, $timezone))) {
-                $value = date_format($datetime, $format);
-            } elseif ($datetime = @date_create_from_format('U.u', (float) $value, $timezone)) {
-                $value = date_format($datetime, $format);
-            }
+        if (is_string($value) && ($datetime = @date_create($value, $timezone))) {
+            return date_format($datetime, $format);
+        } elseif ($datetime = @date_create_from_format('U.u', (float) $value, $timezone)) {
+            return date_format($datetime, $format);
         }
 
-        return "$value";
+        return null;
+    }
+
+    private static function formatNumber($value, string $format = null)
+    {
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $format = str_replace('\$', '$', preg_replace('/(?<!\\\\)\$/', static::getLocale('currency_symbol'), $format));
+
+        if (!preg_match('/^(?<ini>.*?)(?<int>0,000|0)(\.(?<dec>0+))?(?<end>.*?)$/', $format, $matches)) {
+            return null;
+        }
+
+        $decimalSeparator = static::getLocale('decimal_separator');
+        $thousandSeparator = static::getLocale('thousand_separator');
+
+        $int = intval($value);
+        $dec = abs(fmod(floatval($value), 1));
+        if ('0,000' === ($matches['int'] ?? null)) {
+            $value = strrev(implode($thousandSeparator, str_split(strrev($int), 3)));
+        }
+        if ($len = strlen($matches['dec'] ?? '')) {
+            $value .= $decimalSeparator.str_pad(substr((string) $dec, 2, $len), $len, '0');
+        }
+
+        return sprintf('%s%s%s', $matches['ini'] ?? null, $value, $matches['end'] ?? null);
+    }
+
+    private static function formatValue($value, string $format = null)
+    {
+        if (is_null($format)) {
+            /* BREAK */
+        } elseif ($number = static::formatNumber($value, $format)) {
+            $value = $number;
+        } elseif ($datetime = static::formatDatetime($value, $format)) {
+            $value = $datetime;
+        }
+
+        return (string) $value;
     }
 }
