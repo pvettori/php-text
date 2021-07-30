@@ -1,0 +1,20 @@
+{
+    "name": "pvettori/text",
+    "version": "0.0.1",
+    "description": "String manipulation for humans.",
+    "authors": [
+        {
+            "name": "Piero Vettori",
+            "email": "pierovettoriproject@gmail.com"
+        }
+    ],
+    "license": "MIT",
+    "autoload": {
+        "files": [
+            "src/Text.php"
+        ]
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    }
+}
