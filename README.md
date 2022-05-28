@@ -1,16 +1,20 @@
 # PHP Text: string manipulation for humans
-[![Latest Version](https://img.shields.io/badge/version-0.0.1-orange)](https://github.com/pvettori/router/releases)
+[![Latest Version](https://img.shields.io/badge/version-0.1.0-orange)](https://github.com/pvettori/router/releases)
 [![PHP Version](https://img.shields.io/badge/php-%E2%89%A57.0-blue)](https://www.php.net/)
 [![MIT License](https://img.shields.io/badge/license-MIT-green)](https://github.com/pvettori/router/blob/master/LICENSE)
 
-The functions in this library may not be as computationally efficient as the builtin PHP functions,
-but they are quite useful if you want to avoid some headaches.
+The methods in this library may not be as computationally efficient as the builtin PHP functions,
+but they are quite useful if you want to avoid some headaches.  
+> **Note:** Some methods use the multi-byte safe built-in functions whenever possible.  
+See: [***php*** Multibyte String Functions](https://www.php.net/manual/en/ref.mbstring.php).
+
 
 ## Contents
 - [String manipulation functions](#string-manipulation-functions)
   - [`Text::convert(string $string, string $encoding, [$from])`](#textconvertstring-string-string-encoding-from)
   - [`Text::format(string $format, array $values)`](#textformatstring-format-array-values)
   - [`Text::indexOf(string $substring, string $string, [int $offset], [bool $case_sensitive])`](#textindexofstring-substring-string-string-int-offset-bool-case_sensitive)
+  - [`Text::isRegEx(string $pattern)`](#textisregexstring-pattern)
   - [`Text::join(array $array, [string $string])`](#textjoinarray-array-string-string)
   - [`Text::length(string $string, [string $encoding])`](#textlengthstring-string-string-encoding)
   - [`Text::lowercase(string $string)`](#textlowercasestring-string)
@@ -37,7 +41,7 @@ Convert a string's character encoding.
 |`$string`  |_string_          |The original string.|
 |`$encoding`|_string_          |The target encoding.|
 |`$from`    |_string\|string\[\]_|Optional.<br>The original encoding.<br>It is either an array, or a comma separated enumerated list.<br>If `$from` is not specified, then the internal encoding will be used.|
-#### **Return** _string_<!-- omit in toc -->
+#### Return _string_<!-- omit in toc -->
 
 ### `Text::format(string $format, array $values)`
 Format a string.
@@ -57,6 +61,13 @@ Find the position of a substring in a string.
 |`$case_sensitive`|_bool_|Optional.<br>If `false`, serarch will be case-insensitive. Default: `true`.|
 #### Return _int_<!-- omit in toc -->
 A return value of `-1` means that the substing was not found.
+
+### `Text::isRegEx(string $pattern)`
+Check whether a string is a valid regular expression or not.
+|Parameter|Type|Description|
+|---------|----|-----------|
+|`$pattern`|_string_|The string pattern.|
+#### Return _bool_<!-- omit in toc -->
 
 ### `Text::join(array $array, [string $string])`
 Join array elements with a string.
@@ -89,6 +100,7 @@ Perform a string match.
 |`$pattern`|_string_|The characters or regex to search for.|
 |`$groups` |_array_ |Optional.<br>Array of all captured groups.|
 #### Return _string|null_<!-- omit in toc -->
+The full mathching string.
 
 ### `Text::matchAll(string $string, string $pattern, [array &$groups])`
 Perform a global string match.
@@ -159,7 +171,7 @@ Wrap a string to a given number of characters.
 |`$string`|_string_|The original string.|
 |`$length`|_int_   |The maximum length of a line.|
 |`$break` |_string_|Optional.<br>Line break character.<br>Default: `"\n"`.|
-|`$cut`   |_int_   |Optional.<br>How to cut the line if a word exceeds maximum length.<br>Accepted values:<br>- `Text::WRAP_AFTER`<br>- `Text::WRAP_BEFORE`<br>- `Text::WRAP_BREAK`<br>Default: `Text::WRAP_BEFORE`.|
+|`$cut`   |_int_   |Optional.<br>How to cut the line if a word exceeds maximum length.<br>Accepted values:<br>- `Text::WRAP_AFTER` : Wrap at first space after the specified length.<br>- `Text::WRAP_BEFORE` : Wrap at last space before the specified length.<br>- `Text::WRAP_BREAK` : Wrap exactly at the specified length.<br>Default: `Text::WRAP_BEFORE`.|
 #### Return _string_<!-- omit in toc -->
 
 ## Locale settings functions

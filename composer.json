@@ -1,6 +1,6 @@
 {
-    "name": "pvettori/text",
-    "version": "0.0.1",
+    "name": "pvettori/php-text",
+    "version": "0.1.0",
     "description": "PHP Text: string manipulation for humans.",
     "authors": [
         {
@@ -9,6 +9,12 @@
         }
     ],
     "license": "MIT",
+    "keywords": [
+        "format",
+        "strings",
+        "style",
+        "text"
+    ],
     "autoload": {
         "files": [
             "src/Text.php"

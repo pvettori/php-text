@@ -11,9 +11,9 @@ final class Text
     const TRIM_BOTH = 2;
     const TRIM_LEFT = 0;
     const TRIM_RIGHT = 1;
-    const WRAP_AFTER = 0;
-    const WRAP_BEFORE = 1;
-    const WRAP_BREAK = 2;
+    const WRAP_AFTER = 1;
+    const WRAP_BEFORE = 2;
+    const WRAP_BREAK = 0;
     const STYLE_TEXT_PARAGRAPH = 1;
     const STYLE_TEXT_TITLE = 2;
     const STYLE_TEXT_LOWERCASE = 3;
@@ -132,6 +132,22 @@ final class Text
     }
 
     /**
+     * Check whether a string is a valid regex or not.
+     *
+     * @param string $pattern The string pattern.
+     *
+     * @return bool
+     */
+    public static function isRegEx(string $pattern): bool
+    {
+        set_error_handler(function () {});
+        $isRegEx = preg_match($pattern, '');
+        restore_error_handler();
+
+        return !in_array($isRegEx, [false, null], true);
+    }
+
+    /**
      * Join array elements with a string.
      *
      * @param array  $array  The array of strings to join.
@@ -187,7 +203,7 @@ final class Text
      */
     public static function match(string $string, string $pattern, array &$groups = null)
     {
-        if (in_array(@preg_match($pattern, ''), [false, null], true)) {
+        if (!static::isRegEx($pattern)) {
             $pattern = sprintf('/%s/', preg_quote($pattern, '/'));
         }
 
@@ -208,7 +224,7 @@ final class Text
      */
     public static function matchAll(string $string, string $pattern, array &$groups = null)
     {
-        if (in_array(@preg_match($pattern, ''), [false, null], true)) {
+        if (!static::isRegEx($pattern)) {
             $pattern = sprintf('/%s/', preg_quote($pattern, '/'));
         }
 
@@ -252,7 +268,7 @@ final class Text
      */
     public static function split(string $string, string $pattern, int $limit = 0)
     {
-        if (in_array(@preg_match($pattern, ''), [false, null], true)) {
+        if (!static::isRegEx($pattern)) {
             return ($limit > 0)
                 ? explode($pattern, $string, $limit)
                 : explode($pattern, $string);
@@ -396,17 +412,14 @@ final class Text
      *
      * @return string
      */
-    public static function wrap(string $string, int $length, string $break = "\n", int $cut = self::WRAP_BEFORE)
+    public static function wrap(string $string, int $length, string $break = PHP_EOL, int $cut = self::WRAP_BEFORE)
     {
-        switch ($cut) {
-            case static::WRAP_AFTER:
-                $regex = "/(.{{$length},})\s+/";
-                break;
-            case static::WRAP_BEFORE:
-                $regex = sprintf('/(.{0,%s}[^\s]|[^\s]+)\s\h*/', $length - 1);
-                break;
-            default:
-                $regex = "/(.{0,{$length}})\s*/";
+        if ($cut === static::WRAP_AFTER) {
+            $regex = "/(.{{$length},})\s+/";
+        } elseif ($cut === static::WRAP_BEFORE) {
+            $regex = sprintf('/(.{0,%s}[^\s]|[^\s]+)\s\h*/', $length - 1);
+        } else {
+            $regex = "/(.{0,{$length}})\s*/";
         }
 
         $lines = preg_split($regex, preg_replace('/\R/', "\n", trim($string)), -1, PREG_SPLIT_DELIM_CAPTURE);

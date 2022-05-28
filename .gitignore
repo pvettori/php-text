@@ -1,2 +1,5 @@
-/vendor
-_*
+# Composer
+/vendor/
+
+# Ignore
+/ignore/
