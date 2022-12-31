@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Class Text.
  * A static class that provides string manipulation functions.
@@ -21,6 +22,7 @@ final class Text
     const STYLE_VAR_CAMEL_CASE = 10;
     const STYLE_VAR_KEBAB_CASE = 11;
     const STYLE_VAR_PASCAL_CASE = 12;
+    const STYLE_VAR_STUDLY_CASE = 12; // alias of Text::STYLE_VAR_PASCAL_CASE
     const STYLE_VAR_SNAKE_CASE = 13;
     const STYLE_VAR_LOWER_CASE = 13; // alias of Text::STYLE_VAR_SNAKE_CASE
     const STYLE_VAR_UPPER_CASE = 14;
@@ -257,24 +259,42 @@ final class Text
     }
 
     /**
+     * Quote regular expression characters.
+     *
+     * @param string $string    The original string.
+     * @param string $delimiter [optional] RegEx delimiter. Default: `'/'`.
+     *
+     * @return string
+     */
+    public static function quote(string $string, string $delimiter = '/'): string
+    {
+        return preg_quote($string, $delimiter);
+    }
+
+    /**
      * Split a string into chunks.
      *
      * @param string $string  The original string.
      * @param string $pattern The characters or regex used as splitter.
      * @param int    $limit   [optional] The maximum number of cuts (`0` - or negative numbers - means no limits). \
      *                        Default: `0`.
+     * @param bool   $strict  [optional] When `true` and `$limit` is not zero it returns an array with exactly `$limit` number of elements. \
+     *                        _Short arrays are padded with_ `null` _values._
+     *                        Default: `false`.
      *
      * @return array
      */
-    public static function split(string $string, string $pattern, int $limit = 0)
+    public static function split(string $string, string $pattern, int $limit = 0, bool $strict = false)
     {
-        if (!static::isRegEx($pattern)) {
-            return ($limit > 0)
-                ? explode($pattern, $string, $limit)
-                : explode($pattern, $string);
+        if (static::isRegEx($pattern)) {
+            $array = preg_split($pattern, $string, max(0, $limit));
+        } elseif ($limit > 0) {
+            $array = explode($pattern, $string, $limit);
+        } else {
+            $array = explode($pattern, $string);
         }
 
-        return preg_split($pattern, $string, max(0, $limit));
+        return $strict ? array_pad($array, $limit, null) : $array;
     }
 
     /**
@@ -309,6 +329,7 @@ final class Text
         }
 
         switch ($style) {
+
             case static::STYLE_TEXT_PARAGRAPH:
                 $string = preg_replace('/\s*([:;,])\s*/s', '$1 ', $string);
                 $phrases = preg_split('/\s*\.\s*/', $string);
@@ -316,6 +337,7 @@ final class Text
                 return implode('. ', array_map(function ($phrase) {
                     return strtoupper(substr($phrase, 0, 1)).substr($phrase, 1);
                 }, $phrases));
+
             case static::STYLE_TEXT_TITLE:
                 if (!function_exists('mb_convert_case')) {
                     throw new \RuntimeException('This function requires the \'mbstring\' extension; please enable it in your php.ini file');
@@ -326,22 +348,30 @@ final class Text
                 }, $chunks);
 
                 return implode('', $chunks);
+
             case static::STYLE_TEXT_LOWERCASE:
                 return static::lowercase($string);
+
             case static::STYLE_TEXT_UPPERCASE:
                 return static::uppercase($string);
+
             case static::STYLE_VAR_CAMEL_CASE:
                 $words = $parseWords($string);
 
                 return array_shift($words).implode('', array_map('ucfirst', $words));
+
             case static::STYLE_VAR_KEBAB_CASE:
                 return implode('-', $parseWords($string));
+
             case static::STYLE_VAR_PASCAL_CASE:
                 return implode('', array_map('ucfirst', $parseWords($string)));
+
             case static::STYLE_VAR_SNAKE_CASE:
                 return implode('_', $parseWords($string));
+
             case static::STYLE_VAR_UPPER_CASE:
                 return strtoupper(implode('_', $parseWords($string)));
+
         }
 
         return $string;
