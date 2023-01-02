@@ -1,5 +1,7 @@
 <?php
 
+namespace PVproject\Utils;
+
 /**
  * Class Text.
  * A static class that provides string manipulation functions.

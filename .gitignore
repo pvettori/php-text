@@ -1,5 +1,9 @@
 # Composer
-/vendor/
+vendor/
 
-# Ignore
-/ignore/
+# Hidden
+_**
+_*.*
+
+# VS Code
+.vscode

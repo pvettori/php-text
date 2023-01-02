@@ -1,6 +1,7 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
+use PVproject\Utils\Text;
 
 class WrapTest extends TestCase
 {
